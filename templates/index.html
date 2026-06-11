@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Альфа-CBDC · Трансграничные расчёты в цифровом рубле</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">α</div>
+    <div>
+      <h1>Альфа-CBDC</h1>
+      <div class="subtitle">Трансграничные расчёты в цифровом рубле · MVP</div>
+    </div>
+  </div>
+  <div class="flex" style="gap:16px">
+    <span class="tag">FZ-340 · FZ-115 · Инструкция 181-И</span>
+    <div style="min-width:280px">
+      <select id="current-client" style="background:#fff;color:#1B1B1B"></select>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="dashboard" class="active">Дашборд</button>
+  <button data-tab="clients">Клиенты &amp; кошельки</button>
+  <button data-tab="contracts">Контрагенты &amp; контракты</button>
+  <button data-tab="payments">Трансграничные платежи</button>
+  <button data-tab="smart-contracts">Смарт-контракты</button>
+  <button data-tab="vc">Валютный контроль</button>
+  <button data-tab="audit">Журнал аудита</button>
+  <button data-tab="about">О продукте</button>
+</nav>
+
+<main>
+
+<!-- ============== Дашборд ============== -->
+<section class="tab active" data-tab="dashboard">
+  <h2>Дашборд платформы <span class="hint">сводные KPI по сервису «Альфа-CBDC»</span></h2>
+
+  <div class="grid cols-4" style="margin-top:12px">
+    <div class="card kpi"><span class="label">Клиентов ВЭД</span><span class="value" id="kpi-clients">0</span><span class="sub">Юридические лица</span></div>
+    <div class="card kpi"><span class="label">Цифровых кошельков</span><span class="value" id="kpi-wallets">0</span><span class="sub">на платформе Банка России</span></div>
+    <div class="card kpi"><span class="label">Контрактов ВЭД</span><span class="value" id="kpi-contracts">0</span><span class="sub">поставлено на учёт (181-И)</span></div>
+    <div class="card kpi"><span class="label">Программа лояльности</span><span class="value" id="kpi-loyalty">0</span><span class="sub">клиентов с ≥{{ loyalty_threshold }} опер./мес</span></div>
+
+    <div class="card kpi"><span class="label">Платежей исполнено</span><span class="value" id="kpi-settled">0</span><span class="sub">атомарных транзакций</span></div>
+    <div class="card kpi"><span class="label">Платежей в процессе</span><span class="value" id="kpi-pending">0</span><span class="sub">включая эскроу</span></div>
+    <div class="card kpi"><span class="label">Активных смарт-контрактов</span><span class="value" id="kpi-sc-active">0</span><span class="sub">«Безопасная сделка»</span></div>
+    <div class="card kpi"><span class="label">Объём расчётов</span><span class="value" id="kpi-volume">0 ₽</span><span class="sub">Комиссии: <span id="kpi-fees">0 ₽</span></span></div>
+  </div>
+
+  <h3 style="margin-top:24px">Подключённые коридоры ЦВЦБ</h3>
+  <p class="lead">Двусторонние интероперабельные шлюзы между платформой цифрового рубля Банка России и платформами ЦВЦБ дружественных юрисдикций.</p>
+  <div class="grid cols-3" id="corridors-grid"></div>
+</section>
+
+<!-- ============== Клиенты ============== -->
+<section class="tab" data-tab="clients">
+  <h2>Клиенты-юридические лица <span class="hint">Модуль 1 · KYC/KYB по ФЗ № 115-ФЗ · Кошелёк по ФЗ № 340-ФЗ</span></h2>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Зарегистрировать клиента</h3>
+      <form id="client-form">
+        <div class="form-row">
+          <div><label>Наименование</label><input name="name" required placeholder="ООО «РосИмпорт»" /></div>
+          <div><label>ИНН</label><input name="inn" required minlength="10" maxlength="12" placeholder="7701234567" /></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label>Сегмент бизнеса</label>
+            <select name="segment">
+              <option value="small">Малый бизнес · сделки 5–20 млн ₽ · тариф 2.0%</option>
+              <option value="medium">Средний бизнес · 20–250 млн ₽ · тариф 1.0%</option>
+              <option value="large">Крупный бизнес · &gt;250 млн ₽ · тариф 0.5%</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div><label>Email</label><input name="email" type="email" placeholder="ved@example.ru" /></div>
+          <div><label>Телефон</label><input name="phone" placeholder="+7 495 ..." /></div>
+        </div>
+        <button class="btn" type="submit">Зарегистрировать</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>Текущий клиент: кошелёк цифрового рубля</h3>
+      <div id="wallet-box"></div>
+      <div class="divider"></div>
+      <h3>Пополнение / вывод (Модуль 2)</h3>
+      <p class="muted" style="margin:0 0 8px">Соотношение 1:1 с расчётным счётом, без комиссии за пополнение.</p>
+      <div class="form-row">
+        <div><label>Пополнить (цифр. ₽)</label>
+          <input id="topup-amount" type="number" min="0" step="1000" placeholder="1000000" /></div>
+        <div style="flex:0 0 auto;display:flex;align-items:flex-end">
+          <button class="btn" id="topup-btn">Пополнить</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Вывести (цифр. ₽)</label>
+          <input id="withdraw-amount" type="number" min="0" step="1000" placeholder="500000" /></div>
+        <div style="flex:0 0 auto;display:flex;align-items:flex-end">
+          <button class="btn ghost" id="withdraw-btn">Вывести</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:24px">Все клиенты</h3>
+  <div class="card table-wrap">
+    <table>
+      <thead><tr>
+        <th>Клиент</th><th>Сегмент</th><th>KYC</th><th>Контакты</th><th></th>
+      </tr></thead>
+      <tbody id="clients-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============== Контрагенты и контракты ============== -->
+<section class="tab" data-tab="contracts">
+  <h2>Контрагенты и внешнеторговые контракты
+    <span class="hint">постановка на учёт согласно Инструкции Банка России № 181-И</span></h2>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Новый иностранный контрагент</h3>
+      <form id="cp-form">
+        <div class="form-row">
+          <div><label>Наименование</label>
+            <input name="name" required placeholder="Shenzhen Electronics Co., Ltd." /></div>
+        </div>
+        <div class="form-row">
+          <div><label>Страна / коридор ЦВЦБ</label>
+            <select name="country" id="cp-country" required></select></div>
+          <div><label>Банк контрагента</label><input name="bank" placeholder="Bank of China" /></div>
+        </div>
+        <button class="btn" type="submit">Добавить контрагента</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>Новый внешнеторговый контракт</h3>
+      <form id="contract-form">
+        <div class="form-row">
+          <div><label>Контрагент</label>
+            <select name="counterparty" id="contract-counterparty" required></select></div>
+        </div>
+        <div class="form-row">
+          <div><label>Номер контракта</label><input name="number" required placeholder="IMP-CN-2026-001" /></div>
+          <div><label>Дата контракта</label><input name="date" type="date" required /></div>
+        </div>
+        <div class="form-row">
+          <div><label>Тип операции</label>
+            <select name="operation" required>
+              {% for op in operation_types %}<option>{{ op }}</option>{% endfor %}
+            </select></div>
+          <div><label>Валюта</label>
+            <select name="currency">
+              <option>RUB</option><option>CNY</option><option>AED</option><option>BYN</option>
+            </select></div>
+        </div>
+        <div class="form-row">
+          <div><label>Сумма контракта</label>
+            <input name="amount" type="number" min="0" step="100000" required placeholder="15000000" /></div>
+        </div>
+        <div class="form-row">
+          <div><label>Описание</label>
+            <textarea name="description" rows="2" placeholder="Поставка электронных компонентов..."></textarea></div>
+        </div>
+        <button class="btn" type="submit">Зарегистрировать и поставить на учёт</button>
+      </form>
+    </div>
+  </div>
+
+  <h3 style="margin-top:24px">Контракты выбранного клиента</h3>
+  <div class="card table-wrap">
+    <table>
+      <thead><tr>
+        <th>Номер / УНК</th><th>Операция</th><th>Контрагент</th>
+        <th class="right">Сумма</th><th>Дата</th><th>Статус</th>
+      </tr></thead>
+      <tbody id="contracts-tbody"></tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:24px">Реестр иностранных контрагентов</h3>
+  <div class="card table-wrap">
+    <table>
+      <thead><tr><th>Наименование</th><th>Страна</th><th>Банк</th><th>Кошелёк ЦВЦБ-партнёра</th></tr></thead>
+      <tbody id="cps-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============== Платежи ============== -->
+<section class="tab" data-tab="payments">
+  <h2>Трансграничный платёж <span class="hint">Модуль 3 · атомарная транзакция drub ↔ ЦВЦБ-партнёра</span></h2>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Инициировать платёж</h3>
+      <form id="payment-form">
+        <div class="form-row">
+          <div><label>Контракт</label>
+            <select name="contract" id="payment-contract" required></select></div>
+        </div>
+        <div class="form-row">
+          <div><label>Коридор ЦВЦБ</label>
+            <select name="corridor" id="payment-corridor" required></select></div>
+          <div><label>Сумма в валюте контрагента</label>
+            <input id="payment-amount" name="amount" type="number" min="0" step="100" required placeholder="100000" /></div>
+        </div>
+        <div class="form-row">
+          <div><label>Тип платежа</label>
+            <select name="type">
+              <option value="instant">Мгновенный (атомарная транзакция, секунды)</option>
+              <option value="smart_contract">Смарт-контракт «Безопасная сделка» (Модуль 4)</option>
+            </select></div>
+          <div><label>Срок исполнения смарт-контракта (дни)</label>
+            <input name="deadline" type="number" min="1" value="30" /></div>
+        </div>
+        <button class="btn" type="submit">Подписать и отправить</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>Котировка</h3>
+      <p class="muted" style="margin:0 0 10px">Кросс-курсы согласованы между Банком России и центральным банком-партнёром.</p>
+      <div class="quote-box" id="quote-box"></div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:24px">Платежи выбранного клиента</h3>
+  <div class="card table-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th><th>Тип</th><th>Коридор</th><th class="right">Сумма ЦВЦБ</th>
+        <th class="right">Сумма drub</th><th class="right">Комиссия</th>
+        <th>Статус / TX</th><th>Время</th>
+      </tr></thead>
+      <tbody id="payments-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============== Смарт-контракты ============== -->
+<section class="tab" data-tab="smart-contracts">
+  <h2>Смарт-контракты «Безопасная сделка»
+    <span class="hint">Модуль 4 · эскроу-кошелёк на платформе Банка России</span></h2>
+  <p class="lead">Сумма блокируется в эскроу и автоматически перечисляется поставщику после выполнения всех условий: получения электронной транспортной накладной, подтверждения таможенного контроля через ФТС, подтверждения приёмки груза получателем. При неисполнении условий в установленный срок сумма возвращается клиенту.</p>
+  <div id="sc-list" class="grid" style="gap:12px"></div>
+</section>
+
+<!-- ============== Валютный контроль ============== -->
+<section class="tab" data-tab="vc">
+  <h2>Валютный контроль и автоотчётность
+    <span class="hint">Модуль 5 · Инструкция Банка России № 181-И</span></h2>
+  <p class="lead">Контракт ставится на учёт (УНК), по каждой операции автоматически формируется справка о подтверждающих документах (СПД). Пакет документов передаётся в Банк России и Федеральную налоговую службу через защищённые каналы.</p>
+  <div id="vc-list" class="grid" style="gap:12px"></div>
+</section>
+
+<!-- ============== Аудит ============== -->
+<section class="tab" data-tab="audit">
+  <h2>Журнал аудита <span class="hint">все значимые операции платформы</span></h2>
+  <div class="card table-wrap">
+    <table>
+      <thead><tr><th>Время</th><th>Источник</th><th>Действие</th><th>Сущность</th><th>Детали</th></tr></thead>
+      <tbody id="audit-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============== О продукте ============== -->
+<section class="tab" data-tab="about">
+  <h2>О продукте «Альфа-CBDC»</h2>
+  <div class="card">
+    <p>Сервис обеспечивает проведение трансграничных платежей в цифровом рубле через платформу Банка России с последующей <b>атомарной конвертацией</b> в:</p>
+    <ul>
+      {% for code, c in corridors.items() %}
+      <li>{{ c.flag }} <b>{{ c.currency_code }}</b> — {{ c.currency_name }} ({{ c.central_bank }}, доля {{ c.share_pct }}%)</li>
+      {% endfor %}
+    </ul>
+
+    <h3>Шесть функциональных модулей</h3>
+    <ol>
+      <li><b>Кошелёк цифрового рубля для юридического лица</b> — открытие через интернет-банк Альфа-Банка, KYC/KYB по ФЗ-115.</li>
+      <li><b>Пополнение и вывод</b> цифровых рублей в соотношении 1:1 с расчётным счётом.</li>
+      <li><b>Трансграничный платёж</b> через интероперабельный шлюз — атомарная транзакция drub ↔ ЦВЦБ-партнёра.</li>
+      <li><b>Смарт-контракт «Безопасная сделка»</b> — эскроу + автоисполнение по условиям (накладная, ФТС, приёмка).</li>
+      <li><b>Валютный контроль и автоотчётность</b> по Инструкции 181-И — УНК, СПД, передача в ЦБ РФ и ФНС России.</li>
+      <li><b>Программа лояльности</b> — при ≥{{ loyalty_threshold }} операциях/месяц: персональный валютный консультант, льготные курсы, приоритетная обработка.</li>
+    </ol>
+
+    <h3>Сравнение с альтернативами</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Параметр</th><th>Платёжный агент</th><th>Криптовалюта</th><th>Аккредитив</th><th>Цифровой рубль</th></tr></thead>
+      <tbody>
+        <tr><td>Скорость</td><td>3 дн.–3 нед.</td><td>10 мин.–1 ч.</td><td>1–4 нед.</td><td><b>Секунды</b></td></tr>
+        <tr><td>Стоимость</td><td>2,4–8%</td><td>1–4% + спред</td><td>КС + 2–5%</td><td><b>0,5–2,0%</b></td></tr>
+        <tr><td>Юридический статус</td><td>Серая зона</td><td>Серая зона</td><td>Легально</td><td><b>Полностью легально</b></td></tr>
+        <tr><td>Документация ВЭД</td><td>Часто отсутствует</td><td>Отсутствует</td><td>Полная</td><td><b>Полная, автоматическая</b></td></tr>
+        <tr><td>Программируемость</td><td>Нет</td><td>Только DeFi</td><td>Нет</td><td><b>Смарт-контракты</b></td></tr>
+        <tr><td>Зависимость от SWIFT/USD</td><td>Высокая</td><td>Средняя</td><td>Высокая</td><td><b>Нет</b></td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>Юридические основания</h3>
+    <ul>
+      {% for k, v in legal_basis.items() %}<li>{{ v }}</li>{% endfor %}
+    </ul>
+    <p class="muted"><em>MVP создан в исследовательских целях. Кросс-курсы, идентификаторы транзакций и интероперабельные шлюзы — демонстрационные.</em></p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Альфа-CBDC · MVP трансграничных расчётов в цифровом рубле · v0.1.0
+</footer>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
